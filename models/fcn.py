@@ -62,11 +62,11 @@ class Resnet(nn.Module):
         self.fs3 = Fusion(256)
         self.fs4 = Fusion(64)
 
-        self.out0 = self._classifier(2048)
-        self.out1 = self._classifier(1024)
-        self.out2 = self._classifier(512)
-        self.out3 = self._classifier(256)
-        self.out4 = self._classifier(64)
+        # self.out0 = self._classifier(2048)
+        # self.out1 = self._classifier(1024)
+        # self.out2 = self._classifier(512)
+        # self.out3 = self._classifier(256)
+        # self.out4 = self._classifier(64)
         self.out5 = self._classifier(32)
 
         self.transformer = nn.Conv2d(256, 64, kernel_size=1)
@@ -79,11 +79,11 @@ class Resnet(nn.Module):
                           kernel_size=3, padding=1)
             )
         return nn.Sequential(
-            nn.Conv2d(inplanes, inplanes/2, 3, padding=1, bias=False),
-            nn.BatchNorm2d(inplanes/2),
+            nn.Conv2d(inplanes, inplanes//2, 3, padding=1, bias=False),
+            nn.BatchNorm2d(inplanes//2),
             nn.ReLU(inplace=True),
             nn.Dropout(.1),
-            nn.Conv2d(inplanes/2, self.num_classes, 1),
+            nn.Conv2d(inplanes//2, self.num_classes, 1),
         )
 
     def forward(self, x):
@@ -100,19 +100,19 @@ class Resnet(nn.Module):
         fm3 = self.layer3(fm2) #1024 14 14
         
         fm4 = self.layer4(fm3) #2048 7 7 
-        out32 = self.out0(fm4) #c, 7, 7
+        # out32 = self.out0(fm4) #c, 7, 7
 
         fs_fm3 = self.fs1(fm3, self.upsample1(fm4, fm3.size()[2:])) #1024, 14, 14
-        out16 = self.out1(fs_fm3) #c, 14, 14
+        # out16 = self.out1(fs_fm3) #c, 14, 14
 
         fs_fm2 = self.fs2(fm2, self.upsample2(fs_fm3, fm2.size()[2:])) #512, 28, 28
-        out8 = self.out2(fs_fm2) #c, 28, 28
+        # out8 = self.out2(fs_fm2) #c, 28, 28
 
         fs_fm1 = self.fs3(fm1, self.upsample3(fs_fm2, fm1.size()[2:])) #256, 56, 56
-        out4 = self.out3(fs_fm1) #c, 56, 56
+        # out4 = self.out3(fs_fm1) #c, 56, 56
 
         fs_conv_x = self.fs4(conv_x, self.upsample4(fs_fm1, conv_x.size()[2:])) #64, 112, 112
-        out2 = self.out4(fs_conv_x) #c, 112, 112
+        # out2 = self.out4(fs_conv_x) #c, 112, 112
 
         fs_input = self.upsample5(fs_conv_x, input.size()[2:]) #32, 224, 224
         out = self.out5(fs_input) #c, 224, 224

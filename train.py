@@ -12,8 +12,8 @@ from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 
 from models.fcn import Resnet
-from dataloader import gor
-from img_loader import VOCLoader
+from dataloader import gor, here
+from img_loader import GORLoader, HERELoader
 from transforms import input_transform, restore_input_transform, mask_transform
 
 from gen_utils import make_dir_if_not_exist
@@ -61,12 +61,12 @@ def main():
 	optimizer = optim.Adam(params, lr=args.lr)
 
 	if args.mode == 'demo':
-		train_data_loader, test_data_loader = sample_data()
+		train_data_loader, test_data_loader = sample_data(args.dset)
 		test(test_data_loader, model, criterion, demo=True)
 		return
 
 	for epoch in range(1, args.epochs + 1):
-		train_data_loader, test_data_loader = sample_data()
+		train_data_loader, test_data_loader = sample_data(args.dset)
 		test(test_data_loader, model, criterion)
 		train(train_data_loader, model, criterion, optimizer, epoch)
 		model_to_save = {
@@ -77,21 +77,36 @@ def main():
 			file_name = os.path.join(exp_dir, "checkpoint_" + str(epoch) + ".pth")
 			save_checkpoint(model_to_save, file_name)
 
-def sample_data():
+def sample_data(dset):
 	train_data_loader = None
 	test_data_loader = None
 	
 	kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-	dataset = gor.GOR()
-	train_imgs, train_labels, test_imgs, test_labels = dataset.load()
+	train_data_loader = None
+	test_data_loader = None
 
-	train_data_loader = torch.utils.data.DataLoader(
-		VOCLoader(train_imgs, train_labels, img_transform=input_transform, label_transform=mask_transform),
-		batch_size=args.batch_size, shuffle=True, **kwargs)
-	test_data_loader = torch.utils.data.DataLoader(
-		VOCLoader(test_imgs, test_labels, img_transform=input_transform, label_transform=mask_transform),
-		batch_size=args.batch_size, shuffle=True, **kwargs)
+	if dset == 'here':
+		dataset = here.HERE()
+		train_imgs, train_labels, test_imgs, test_labels = dataset.load(split_from_file=True)
+
+		train_data_loader = torch.utils.data.DataLoader(
+			HERELoader(train_imgs, train_labels, img_transform=input_transform, label_transform=mask_transform),
+			batch_size=args.batch_size, shuffle=True, **kwargs)
+		test_data_loader = torch.utils.data.DataLoader(
+			HERELoader(test_imgs, test_labels, img_transform=input_transform, label_transform=mask_transform),
+			batch_size=args.batch_size, shuffle=True, **kwargs)
+
+	if dset == 'gor':
+		dataset = gor.GOR()
+		train_imgs, train_labels, test_imgs, test_labels = dataset.load()
+
+		train_data_loader = torch.utils.data.DataLoader(
+			GORLoader(train_imgs, train_labels, img_transform=input_transform, label_transform=mask_transform),
+			batch_size=args.batch_size, shuffle=True, **kwargs)
+		test_data_loader = torch.utils.data.DataLoader(
+			GORLoader(test_imgs, test_labels, img_transform=input_transform, label_transform=mask_transform),
+			batch_size=args.batch_size, shuffle=True, **kwargs)
 
 	return train_data_loader, test_data_loader
 
@@ -189,6 +204,9 @@ if __name__ == '__main__':
 
 	parser.add_argument('--num_classes', type=int, default=2, metavar='NC',
 	                help='Num Classes (default: 2)')
+
+	parser.add_argument('--dset', type=str, default='here',
+	                help='Dataset')
 
 
 	global args, device

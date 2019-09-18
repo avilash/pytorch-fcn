@@ -10,9 +10,9 @@ class GOR(object):
     	pass
 
     def load(self):
-    	self.__imgs_dict = {}
-    	base_path = cfg.DATASETS.GOR.HOME
-    	img_path = os.path.join(base_path, 'img')
+        self.__imgs_dict = {}
+        base_path = cfg.DATASETS.GOR.HOME
+        img_path = os.path.join(base_path, 'img')
         mask_path = os.path.join(base_path, 'cls_mask')
 
         train_file_names = [l.strip('\n') for l in open(os.path.join(
