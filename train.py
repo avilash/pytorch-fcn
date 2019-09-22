@@ -139,8 +139,10 @@ def test(data_loader, model, criterion, demo=False):
 	print ("******** Testing ********")
 	if demo:
 		img_target_dir = os.path.join('data', args.exp_name, 'results', 'imgs')
+		weighted_img_target_dir = os.path.join('data', args.exp_name, 'results', 'wt_imgs')
 		pred_target_dir = os.path.join('data', args.exp_name, 'results', 'preds')
 		make_dir_if_not_exist(img_target_dir)
+		make_dir_if_not_exist(weighted_img_target_dir)
 		make_dir_if_not_exist(pred_target_dir)
 	with torch.no_grad():
 		model.eval()
@@ -169,8 +171,9 @@ def test(data_loader, model, criterion, demo=False):
 					red_mask[prediction == 255] = (0, 0, 255)
 					weighted_img = cv2.addWeighted(red_mask, 0.4, real_img, 1, 0)
 
-					cv2.imwrite(os.path.join(img_target_dir, str(batch_idx) + "_" + str(idx) + ".jpg"), weighted_img)
-					# cv2.imwrite(os.path.join(pred_target_dir, str(batch_idx) + "_" + str(idx) + "_pred.png"), prediction)
+					cv2.imwrite(os.path.join(img_target_dir, str(batch_idx) + "_" + str(idx) + ".jpg"), real_img)
+					cv2.imwrite(os.path.join(weighted_img_target_dir, str(batch_idx) + "_" + str(idx) + ".jpg"), weighted_img)
+					cv2.imwrite(os.path.join(pred_target_dir, str(batch_idx) + "_" + str(idx) + "_pred.png"), prediction)
 
 		print('Test Loss: {}'.format(total_loss/len(data_loader)))
 	print ("****************")
@@ -188,7 +191,7 @@ if __name__ == '__main__':
 	                help='enables CUDA training')
 	parser.add_argument("--gpu_devices", type=int, nargs='+', default=None, 
 					help="List of GPU Devices to train on")
-	parser.add_argument('--epochs', type=int, default=10, metavar='N',
+	parser.add_argument('--epochs', type=int, default=15, metavar='N',
 	                help='number of epochs to train (default: 10)')
 	parser.add_argument('--ckp_freq', type=int, default=1, metavar='N',
 	                help='Checkpoint Frequency (default: 1)')
