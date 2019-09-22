@@ -12,6 +12,7 @@ from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 
 from models.fcn import Resnet
+from models.fcn2 import Resnet2
 from dataloader import gor, here
 from img_loader import GORLoader, HERELoader
 from transforms import input_transform, restore_input_transform, mask_transform
