@@ -1,11 +1,8 @@
-import os
-import os.path
-
 import cv2
 import numpy as np
 
 import torch.utils.data
-import torchvision.transforms as transforms
+
 
 class BaseLoader(torch.utils.data.Dataset):
     def __init__(self, imgs, labels, img_transform=None, label_transform=None):
@@ -24,20 +21,20 @@ class BaseLoader(torch.utils.data.Dataset):
         try:
             img = cv2.resize(img, (default_width, default_height))
         except Exception as e:
-            img = np.zeros((default_height, default_width, 3), dtype=np.uint8)  
+            img = np.zeros((default_height, default_width, 3), dtype=np.uint8)
 
         label = cv2.imread(label_pth, cv2.IMREAD_GRAYSCALE)
         try:
             label = cv2.resize(label, (default_width, default_height))
         except Exception as e:
-            label = np.zeros((default_height, default_width), dtype=np.uint8)        
+            label = np.zeros((default_height, default_width), dtype=np.uint8)
 
         if self.img_transform is not None:
             img = self.img_transform(img)
 
         if self.label_transform is not None:
             label = self.label_transform(label)
-        
+
         return img, label
 
     def __len__(self):
@@ -52,11 +49,12 @@ class GORLoader(BaseLoader):
         img, label = super(GORLoader, self).__getitem__(index)
         return img, label
 
+
 class HERELoader(BaseLoader):
     def __init__(self, imgs, labels, img_transform=None, label_transform=None):
         super(HERELoader, self).__init__(imgs, labels, img_transform=img_transform, label_transform=label_transform)
 
     def __getitem__(self, index):
         img, label = super(HERELoader, self).__getitem__(index)
-        label[label!=0] = 1
+        label[label != 0] = 1
         return img, label

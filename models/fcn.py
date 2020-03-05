@@ -1,8 +1,5 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.nn.init as init
-import torch.utils.model_zoo as model_zoo
 from torchvision import models
 
 
@@ -79,11 +76,11 @@ class Resnet(nn.Module):
                           kernel_size=3, padding=1)
             )
         return nn.Sequential(
-            nn.Conv2d(inplanes, inplanes//2, 3, padding=1, bias=False),
-            nn.BatchNorm2d(inplanes//2),
+            nn.Conv2d(inplanes, inplanes // 2, 3, padding=1, bias=False),
+            nn.BatchNorm2d(inplanes // 2),
             nn.ReLU(inplace=True),
             nn.Dropout(.1),
-            nn.Conv2d(inplanes//2, self.num_classes, 1),
+            nn.Conv2d(inplanes // 2, self.num_classes, 1),
         )
 
     def forward(self, x):
@@ -91,31 +88,31 @@ class Resnet(nn.Module):
         x = self.conv1(x)
         x = self.bn0(x)
         x = self.relu(x)
-        conv_x = x #64 112 112
+        conv_x = x  # 64 112 112
         x = self.maxpool(x)
-        pool_x = x #64 56 56
+        pool_x = x  # 64 56 56
 
-        fm1 = self.layer1(x) #256 56 56
-        fm2 = self.layer2(fm1) #512 28 28
-        fm3 = self.layer3(fm2) #1024 14 14
-        
-        fm4 = self.layer4(fm3) #2048 7 7 
+        fm1 = self.layer1(x)  # 256 56 56
+        fm2 = self.layer2(fm1)  # 512 28 28
+        fm3 = self.layer3(fm2)  # 1024 14 14
+
+        fm4 = self.layer4(fm3)  # 2048 7 7
         # out32 = self.out0(fm4) #c, 7, 7
 
-        fs_fm3 = self.fs1(fm3, self.upsample1(fm4, fm3.size()[2:])) #1024, 14, 14
+        fs_fm3 = self.fs1(fm3, self.upsample1(fm4, fm3.size()[2:]))  # 1024, 14, 14
         # out16 = self.out1(fs_fm3) #c, 14, 14
 
-        fs_fm2 = self.fs2(fm2, self.upsample2(fs_fm3, fm2.size()[2:])) #512, 28, 28
+        fs_fm2 = self.fs2(fm2, self.upsample2(fs_fm3, fm2.size()[2:]))  # 512, 28, 28
         # out8 = self.out2(fs_fm2) #c, 28, 28
 
-        fs_fm1 = self.fs3(fm1, self.upsample3(fs_fm2, fm1.size()[2:])) #256, 56, 56
+        fs_fm1 = self.fs3(fm1, self.upsample3(fs_fm2, fm1.size()[2:]))  # 256, 56, 56
         # out4 = self.out3(fs_fm1) #c, 56, 56
 
-        fs_conv_x = self.fs4(conv_x, self.upsample4(fs_fm1, conv_x.size()[2:])) #64, 112, 112
+        fs_conv_x = self.fs4(conv_x, self.upsample4(fs_fm1, conv_x.size()[2:]))  # 64, 112, 112
         # out2 = self.out4(fs_conv_x) #c, 112, 112
 
-        fs_input = self.upsample5(fs_conv_x, input.size()[2:]) #32, 224, 224
-        out = self.out5(fs_input) #c, 224, 224
+        fs_input = self.upsample5(fs_conv_x, input.size()[2:])  # 32, 224, 224
+        out = self.out5(fs_input)  # c, 224, 224
 
         out = F.log_softmax(out, dim=1)
 
