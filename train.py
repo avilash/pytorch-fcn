@@ -16,6 +16,7 @@ from models.fcn2 import Resnet2
 from dataloader import gor, here
 from dataloader.img_loader import GORLoader, HERELoader
 from utils.transforms import input_transform, restore_input_transform, mask_transform
+from utils.eval_utils import mIoU
 
 from utils.gen_utils import make_dir_if_not_exist
 
@@ -153,6 +154,7 @@ def test(data_loader, model, criterion, demo=False):
     with torch.no_grad():
         model.eval()
         total_loss = 0
+        total_mIOU = 0
         for batch_idx, data in enumerate(data_loader):
             batch_idx += 1
             imgs, labels = data
@@ -164,8 +166,10 @@ def test(data_loader, model, criterion, demo=False):
             loss = criterion(outputs, labels)
             total_loss += loss
 
+            predictions = outputs.data.max(1)[1].squeeze_(1).squeeze_(0).cpu().numpy()
+            total_mIOU += mIoU(predictions, labels.data.cpu().numpy(), args.num_classes)
+
             if demo:
-                predictions = outputs.data.max(1)[1].squeeze_(1).squeeze_(0).cpu().numpy()
                 for idx, img, prediction in zip(range(args.batch_size), imgs, predictions):
                     real_img = restore_input_transform(img.data.cpu())
                     real_img = real_img.numpy() * 255
@@ -184,6 +188,7 @@ def test(data_loader, model, criterion, demo=False):
                                 prediction)
 
         print('Test Loss: {}'.format(total_loss / len(data_loader)))
+        print('mIOU: {}'.format(total_mIOU / len(data_loader)))
     print("****************")
 
 
@@ -192,7 +197,7 @@ def save_checkpoint(state, file_name):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='PyTorch Siamese Example')
+    parser = argparse.ArgumentParser(description='PyTorch FCN Example')
     parser.add_argument('--mode', default='train', type=str,
                         help='Mode - Train-Test / Demo')
     parser.add_argument('--exp_name', default='exp0', type=str,
