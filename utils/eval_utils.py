@@ -8,6 +8,6 @@ def mIoU(predictions, labels, num_classes):
         class_preds = predictions == class_idx
         intersection = np.logical_and(class_labels, class_preds)
         union = np.logical_or(class_labels, class_preds)
-        class_iou = np.sum(intersection) / np.sum(union)
+        class_iou = np.sum(intersection.astype(np.float32)) / np.sum(union.astype(np.float32))
         ious.append(class_iou)
     return np.mean(ious)

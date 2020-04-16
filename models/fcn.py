@@ -30,43 +30,11 @@ class Fusion(nn.Module):
         return out
 
 
-class Resnet(nn.Module):
-    def __init__(self, num_classes):
-        super(Resnet, self).__init__()
-
+class BaseNet(nn.Module):
+    def __init__(self, device, num_classes):
+        super(BaseNet, self).__init__()
         self.num_classes = num_classes
-
-        resnet = models.resnet101(pretrained=True)
-
-        self.conv1 = resnet.conv1
-        self.bn0 = resnet.bn1
-        self.relu = resnet.relu
-        self.maxpool = resnet.maxpool
-
-        self.layer1 = resnet.layer1
-        self.layer2 = resnet.layer2
-        self.layer3 = resnet.layer3
-        self.layer4 = resnet.layer4
-
-        self.upsample1 = Upsample(2048, 1024)
-        self.upsample2 = Upsample(1024, 512)
-        self.upsample3 = Upsample(512, 256)
-        self.upsample4 = Upsample(256, 64)
-        self.upsample5 = Upsample(64, 32)
-
-        self.fs1 = Fusion(1024)
-        self.fs2 = Fusion(512)
-        self.fs3 = Fusion(256)
-        self.fs4 = Fusion(64)
-
-        # self.out0 = self._classifier(2048)
-        # self.out1 = self._classifier(1024)
-        # self.out2 = self._classifier(512)
-        # self.out3 = self._classifier(256)
-        # self.out4 = self._classifier(64)
-        self.out5 = self._classifier(32)
-
-        self.transformer = nn.Conv2d(256, 64, kernel_size=1)
+        self.device = device
 
     def _classifier(self, inplanes):
         if inplanes == 32:
@@ -82,6 +50,51 @@ class Resnet(nn.Module):
             nn.Dropout(.1),
             nn.Conv2d(inplanes // 2, self.num_classes, 1),
         )
+
+
+class Resnet(BaseNet):
+    def __init__(self, device, num_classes):
+        super(Resnet, self).__init__(device, num_classes)
+        resnet = models.resnet18(pretrained=True)
+
+        self.conv1 = resnet.conv1
+        self.bn0 = resnet.bn1
+        self.relu = resnet.relu
+        self.maxpool = resnet.maxpool
+
+        self.layer1 = resnet.layer1
+        self.layer2 = resnet.layer2
+        self.layer3 = resnet.layer3
+        self.layer4 = resnet.layer4
+
+        # self.upsample1 = Upsample(2048, 1024)
+        # self.upsample2 = Upsample(1024, 512)
+        # self.upsample3 = Upsample(512, 256)
+        # self.upsample4 = Upsample(256, 64)
+        # self.upsample5 = Upsample(64, 32)
+        self.upsample1 = Upsample(512, 256)
+        self.upsample2 = Upsample(256, 128)
+        self.upsample3 = Upsample(128, 64)
+        self.upsample4 = Upsample(64, 64)
+        self.upsample5 = Upsample(64, 32)
+
+        # self.fs1 = Fusion(1024)
+        # self.fs2 = Fusion(512)
+        # self.fs3 = Fusion(256)
+        # self.fs4 = Fusion(64)
+        self.fs1 = Fusion(256)
+        self.fs2 = Fusion(128)
+        self.fs3 = Fusion(64)
+        self.fs4 = Fusion(64)
+
+        # self.out0 = self._classifier(2048)
+        # self.out1 = self._classifier(1024)
+        # self.out2 = self._classifier(512)
+        # self.out3 = self._classifier(256)
+        # self.out4 = self._classifier(64)
+        self.out5 = self._classifier(32)
+
+        self.transformer = nn.Conv2d(256, 64, kernel_size=1)
 
     def forward(self, x):
         input = x
@@ -114,6 +127,57 @@ class Resnet(nn.Module):
         fs_input = self.upsample5(fs_conv_x, input.size()[2:])  # 32, 224, 224
         out = self.out5(fs_input)  # c, 224, 224
 
+        out = F.log_softmax(out, dim=1)
+
+        return out
+
+
+class MobileNet(BaseNet):
+    def __init__(self, device, num_classes):
+        super(MobileNet, self).__init__(device, num_classes)
+
+        self.net = models.mobilenet_v2(pretrained=True)
+        self.stages, self.channels = self.get_stages()
+        self.num_stages = len(self.stages)
+
+
+    def get_stages(self):
+        stages = [
+            nn.Identity(),
+            self.net.features[:2],
+            self.net.features[2:4],
+            self.net.features[4:7],
+            self.net.features[7:14],
+            self.net.features[14:],
+        ]
+        channels = [
+            3, 16, 24, 32, 96, 1280
+        ]
+        return stages, channels
+
+    def forward(self, x):
+        stages = self.get_stages()
+        num_stages = len(stages)
+
+        feats_down = []
+        for i in range(num_stages):
+            x = stages[i](x)
+            feats_down.append(x)
+            # print("Downsampling - {}".format(x.size()))
+
+        # Upsample to the first feature layer
+        for i in range(num_stages - 2, 0, -1):
+            target_feat = feats_down[i]
+            fusion_layer = Fusion(target_feat.size()[1]).cuda()
+            upsample_layer = Upsample(x.size()[1], target_feat.size()[1]).cuda()
+            x = fusion_layer(target_feat, upsample_layer(x, target_feat.size()[2:]))
+            # print("Upsampling - {}".format(x.size()))
+
+        target_feat = feats_down[0]
+        # Upsample to the input layer but do not change channels
+        upsample_layer = Upsample(x.size()[1], x.size()[1]).cuda()
+        out = upsample_layer(x, target_feat.size()[2:])
+        out = self._classifier(out.size()[1]).cuda()(out)
         out = F.log_softmax(out, dim=1)
 
         return out

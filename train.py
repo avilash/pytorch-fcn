@@ -11,12 +11,13 @@ from torchvision.datasets import MNIST, FashionMNIST
 from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 
-from models.fcn import Resnet
+from models.fcn import Resnet, MobileNet
 from models.fcn2 import Resnet2
-from dataloader import gor, here
-from dataloader.img_loader import GORLoader, HERELoader
+from dataloader import gor, here, openeds
+from dataloader.img_loader import GORLoader, HERELoader, OPENEDSLoader
 from utils.transforms import input_transform, restore_input_transform, mask_transform
 from utils.eval_utils import mIoU
+from utils.model_utils import count_parameters
 
 from utils.gen_utils import make_dir_if_not_exist
 
@@ -35,7 +36,7 @@ def main():
     exp_dir = os.path.join("data", args.exp_name)
     make_dir_if_not_exist(exp_dir)
 
-    model = Resnet(args.num_classes)
+    model = MobileNet(device, args.num_classes)
     model = nn.DataParallel(model, device_ids=args.gpu_devices)
     model.to(device)
 
@@ -59,6 +60,8 @@ def main():
     for key, value in dict(model.named_parameters()).items():
         if value.requires_grad:
             params += [{'params': [value]}]
+
+    print("Number of trainable params - {}".format(count_parameters(model)))
 
     criterion = torch.nn.NLLLoss(None, ignore_index=255)
     optimizer = optim.Adam(params, lr=args.lr)
@@ -110,6 +113,17 @@ def sample_data(dset):
             batch_size=args.batch_size, shuffle=True, **kwargs)
         test_data_loader = torch.utils.data.DataLoader(
             GORLoader(test_imgs, test_labels, img_transform=input_transform, label_transform=mask_transform),
+            batch_size=args.batch_size, shuffle=True, **kwargs)
+
+    if dset == 'openeds':
+        dataset = openeds.OpenEDS()
+        train_imgs, train_labels, valid_imgs, valid_labels, test_imgs, test_labels = dataset.load()
+
+        train_data_loader = torch.utils.data.DataLoader(
+            OPENEDSLoader(train_imgs, train_labels, img_transform=input_transform, label_transform=mask_transform),
+            batch_size=args.batch_size, shuffle=True, **kwargs)
+        test_data_loader = torch.utils.data.DataLoader(
+            OPENEDSLoader(valid_imgs, valid_labels, img_transform=input_transform, label_transform=mask_transform),
             batch_size=args.batch_size, shuffle=True, **kwargs)
 
     return train_data_loader, test_data_loader

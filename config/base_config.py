@@ -13,6 +13,9 @@ __C.DATASETS.GOR = edict()
 __C.DATASETS.GOR.HOME = ""
 __C.DATASETS.HERE = edict()
 __C.DATASETS.HERE.HOME = ""
+__C.DATASETS.OPENEDS = edict()
+__C.DATASETS.OPENEDS.HOME = ""
+
 
 def _merge_a_into_b(a, b):
     """Merge config dictionary a into config dictionary b, clobbering the
