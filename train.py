@@ -32,13 +32,13 @@ def main():
     torch.manual_seed(1)
     if args.cuda:
         torch.cuda.manual_seed(1)
-        torch.backends.cudnn.enaled = True
+        torch.backends.cudnn.enabled = True
         torch.backends.cudnn.benchmark = True
 
     exp_dir = os.path.join("data", args.exp_name)
     make_dir_if_not_exist(exp_dir)
 
-    model = MobileNet(device, args.num_classes)
+    model = Resnet(device, args.num_classes)
     model = nn.DataParallel(model, device_ids=args.gpu_devices)
     model.to(device)
 

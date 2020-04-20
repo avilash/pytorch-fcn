@@ -67,32 +67,22 @@ class Resnet(BaseNet):
         self.layer3 = resnet.layer3
         self.layer4 = resnet.layer4
 
-        # self.upsample1 = Upsample(2048, 1024)
-        # self.upsample2 = Upsample(1024, 512)
-        # self.upsample3 = Upsample(512, 256)
-        # self.upsample4 = Upsample(256, 64)
-        # self.upsample5 = Upsample(64, 32)
         self.upsample1 = Upsample(512, 256)
         self.upsample2 = Upsample(256, 128)
         self.upsample3 = Upsample(128, 64)
         self.upsample4 = Upsample(64, 64)
         self.upsample5 = Upsample(64, 32)
 
-        # self.fs1 = Fusion(1024)
-        # self.fs2 = Fusion(512)
-        # self.fs3 = Fusion(256)
-        # self.fs4 = Fusion(64)
         self.fs1 = Fusion(256)
         self.fs2 = Fusion(128)
         self.fs3 = Fusion(64)
         self.fs4 = Fusion(64)
 
-        # self.out0 = self._classifier(2048)
-        # self.out1 = self._classifier(1024)
-        # self.out2 = self._classifier(512)
-        # self.out3 = self._classifier(256)
-        # self.out4 = self._classifier(64)
         self.out5 = self._classifier(32)
+
+        for block in [self.conv1, self.layer1, self.layer2, self.layer3]:
+            for param in block.parameters():
+                param.requires_grad = False
 
         self.transformer = nn.Conv2d(256, 64, kernel_size=1)
 
