@@ -150,23 +150,23 @@ class MobileNet(BaseNet):
             self.net.features[7:14],
             self.net.features[14:],
         ]
+        for i in range(4):
+            for param in stages[i].parameters():
+                param.requires_grad = False
         channels = [
             3, 16, 24, 32, 96, 1280
         ]
         return stages, channels
 
     def forward(self, x):
-        stages = self.get_stages()
-        num_stages = len(stages)
-
         feats_down = []
-        for i in range(num_stages):
-            x = stages[i](x)
+        for i in range(self.num_stages):
+            x = self.stages[i](x)
             feats_down.append(x)
             # print("Downsampling - {}".format(x.size()))
 
         # Upsample to the first feature layer
-        for i in range(num_stages - 2, 0, -1):
+        for i in range(self.num_stages - 2, 0, -1):
             target_feat = feats_down[i]
             fusion_layer = Fusion(target_feat.size()[1]).cuda()
             upsample_layer = Upsample(x.size()[1], target_feat.size()[1]).cuda()
