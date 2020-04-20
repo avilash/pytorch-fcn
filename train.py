@@ -32,6 +32,8 @@ def main():
     torch.manual_seed(1)
     if args.cuda:
         torch.cuda.manual_seed(1)
+        torch.backends.cudnn.enaled = True
+        torch.backends.cudnn.benchmark = True
 
     exp_dir = os.path.join("data", args.exp_name)
     make_dir_if_not_exist(exp_dir)
@@ -142,11 +144,13 @@ def train(data_loader, model, criterion, optimizer, epoch):
         outputs = model(imgs)
 
         loss = criterion(outputs, labels)
-        total_loss += loss
+        total_loss += loss.data
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        del loss, outputs
 
         log_step = args.train_log_step
         if batch_idx % log_step == 0:
@@ -178,10 +182,12 @@ def test(data_loader, model, criterion, demo=False):
             outputs = model(imgs)
 
             loss = criterion(outputs, labels)
-            total_loss += loss
+            total_loss += loss.data
 
             predictions = outputs.data.max(1)[1].squeeze_(1).squeeze_(0).cpu().numpy()
             total_mIOU += mIoU(predictions, labels.data.cpu().numpy(), args.num_classes)
+
+            del loss, outputs
 
             if demo:
                 for idx, img, prediction in zip(range(args.batch_size), imgs, predictions):
